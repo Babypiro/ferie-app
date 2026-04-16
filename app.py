@@ -26,6 +26,88 @@ if DATABASE_URL and DATABASE_URL.startswith('postgres://'):
 def get_db_connection():
     return psycopg2.connect(DATABASE_URL, cursor_factory=RealDictCursor)
 
+def init_database():
+    """Inizializza il database creando le tabelle se non esistono"""
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor()
+        
+        # Controlla se la tabella users esiste
+        cur.execute("""
+            SELECT EXISTS (
+                SELECT FROM information_schema.tables 
+                WHERE table_name = 'users'
+            );
+        """)
+        
+        tables_exist = cur.fetchone()['exists']
+        
+        if not tables_exist:
+            print("🔧 Inizializzazione database in corso...")
+            
+            # Crea le tabelle
+            cur.execute("""
+                -- Tabella utenti
+                CREATE TABLE users (
+                    id SERIAL PRIMARY KEY,
+                    nome VARCHAR(100) NOT NULL,
+                    email VARCHAR(255) UNIQUE NOT NULL,
+                    password VARCHAR(255) NOT NULL,
+                    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+                );
+
+                -- Tabella movimenti
+                CREATE TABLE movimenti (
+                    id SERIAL PRIMARY KEY,
+                    user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+                    tipo_permesso VARCHAR(50) NOT NULL,
+                    tipo_movimento VARCHAR(50) NOT NULL,
+                    ore DECIMAL(5,2) NOT NULL,
+                    data_movimento DATE NOT NULL,
+                    anno_maturazione INTEGER,
+                    note TEXT,
+                    cancellato BOOLEAN DEFAULT FALSE,
+                    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+                );
+
+                -- Tabella configurazioni
+                CREATE TABLE configurazioni (
+                    id SERIAL PRIMARY KEY,
+                    user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+                    chiave VARCHAR(100) NOT NULL,
+                    valore VARCHAR(255) NOT NULL,
+                    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+                    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+                );
+
+                -- Indici
+                CREATE INDEX idx_movimenti_user_id ON movimenti(user_id);
+                CREATE INDEX idx_movimenti_data ON movimenti(data_movimento);
+                CREATE INDEX idx_movimenti_tipo_permesso ON movimenti(tipo_permesso);
+                CREATE INDEX idx_movimenti_cancellato ON movimenti(cancellato);
+                CREATE INDEX idx_configurazioni_user_id ON configurazioni(user_id);
+                CREATE INDEX idx_configurazioni_chiave ON configurazioni(chiave);
+                CREATE UNIQUE INDEX idx_configurazioni_user_chiave ON configurazioni(user_id, chiave);
+
+                -- Constraint
+                ALTER TABLE movimenti ADD CONSTRAINT check_tipo_movimento 
+                CHECK (tipo_movimento IN ('MATURAZIONE', 'UTILIZZO', 'RETRIBUZIONE', 'RETTIFICA_POSITIVA', 'RETTIFICA_NEGATIVA', 'SALDO_INIZIALE'));
+
+                ALTER TABLE movimenti ADD CONSTRAINT check_ore_positive 
+                CHECK (ore > 0);
+            """)
+            
+            conn.commit()
+            print("✅ Database inizializzato con successo!")
+        else:
+            print("✅ Database già inizializzato")
+        
+        cur.close()
+        conn.close()
+        
+    except Exception as e:
+        print(f"❌ Errore inizializzazione database: {e}")
+
 class User(UserMixin):
     def __init__(self, id, email, nome, password_hash):
         self.id = id
@@ -391,6 +473,11 @@ def configurazioni():
 @app.context_processor
 def inject_functions():
     return {'ore_a_giorni': ore_a_giorni}
+
+# Inizializza il database all'avvio
+with app.app_context():
+    if DATABASE_URL:
+        init_database()
 
 if __name__ == '__main__':
     app.run(debug=True)
