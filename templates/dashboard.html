@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+{% block content %}
+<h1 class="mb-4"><i class="bi bi-house"></i> Dashboard</h1>
+
+<div class="row g-3 mb-4">
+    <div class="col-md-4">
+        <div class="card text-center p-4">
+            <h5><i class="bi bi-umbrella-fill text-warning"></i> FERIE</h5>
+            {% set tot_ferie = saldo.FERIE.values()|sum %}
+            <h2 class="text-success">{{"%.2f"|format(tot_ferie)}}h</h2>
+            <small class="text-muted">≈ {{"%.1f"|format(ore_a_giorni(tot_ferie))}} giorni</small>
+            {% for anno, ore in saldo.FERIE.items() %}
+            <small class="text-muted">{{anno}}: {{"%.2f"|format(ore)}}h</small>
+            {% endfor %}
+        </div>
+    </div>
+    
+    <div class="col-md-4">
+        <div class="card text-center p-4">
+            <h5><i class="bi bi-clock text-info"></i> ROL</h5>
+            {% set tot_rol = saldo.ROL.values()|sum %}
+            <h2 class="text-success">{{"%.2f"|format(tot_rol)}}h</h2>
+            <small class="text-muted">≈ {{"%.1f"|format(ore_a_giorni(tot_rol))}} giorni</small>
+            {% for anno, ore in saldo.ROL.items() %}
+            <small class="text-muted">{{anno}}: {{"%.2f"|format(ore)}}h</small>
+            {% endfor %}
+        </div>
+    </div>
+    
+    <div class="col-md-4">
+        <div class="card text-center p-4">
+            <h5><i class="bi bi-star text-success"></i> EX FEST</h5>
+            {% set tot_ex = saldo['EX FEST'].values()|sum %}
+            <h2 class="text-success">{{"%.2f"|format(tot_ex)}}h</h2>
+            <small class="text-muted">≈ {{"%.1f"|format(ore_a_giorni(tot_ex))}} giorni</small>
+            {% for anno, ore in saldo['EX FEST'].items() %}
+            <small class="text-muted">{{anno}}: {{"%.2f"|format(ore)}}h</small>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-body">
+        <h5><i class="bi bi-info-circle"></i> Info Sistema</h5>
+        <p>39 ore settimanali su 5 giorni (Lun-Gio: 8h | Ven: 7h)</p>
+    </div>
+</div>
+{% endblock %}

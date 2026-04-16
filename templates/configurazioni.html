@@ -1,0 +1,169 @@
+{% extends "base.html" %}
+
+{% block title %}Configurazioni{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2 class="mb-4">⚙️ Configurazioni</h2>
+    
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                <div class="alert alert-{{ 'success' if category == 'success' else 'danger' }} alert-dismissible fade show" role="alert">
+                    {{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+
+    <div class="card">
+        <div class="card-header bg-primary text-white">
+            <h5 class="mb-0">🔧 Impostazioni Maturazioni Mensili</h5>
+        </div>
+        <div class="card-body">
+            <p class="text-muted mb-4">
+                Configura qui i valori di maturazione mensile per ciascun tipo di permesso. 
+                Questi valori verranno utilizzati quando aggiungi nuove maturazioni.
+            </p>
+
+            <form method="POST" action="{{ url_for('configurazioni') }}" id="configForm">
+                <div class="row">
+                    <div class="col-md-4 mb-3">
+                        <label for="maturazione_ferie" class="form-label">
+                            <strong>Maturazione Mensile FERIE</strong>
+                        </label>
+                        <div class="input-group">
+                            <input type="number" 
+                                   class="form-control" 
+                                   id="maturazione_ferie" 
+                                   name="maturazione_ferie" 
+                                   value="{{ maturazione_ferie }}" 
+                                   step="0.5" 
+                                   min="0" 
+                                   required>
+                            <span class="input-group-text">ore</span>
+                        </div>
+                        <small class="text-muted">
+                            Equivalente a <span id="giorni_ferie">{{ ore_a_giorni(maturazione_ferie) }}</span> giorni
+                        </small>
+                    </div>
+
+                    <div class="col-md-4 mb-3">
+                        <label for="maturazione_rol" class="form-label">
+                            <strong>Maturazione Mensile ROL</strong>
+                        </label>
+                        <div class="input-group">
+                            <input type="number" 
+                                   class="form-control" 
+                                   id="maturazione_rol" 
+                                   name="maturazione_rol" 
+                                   value="{{ maturazione_rol }}" 
+                                   step="0.5" 
+                                   min="0" 
+                                   required>
+                            <span class="input-group-text">ore</span>
+                        </div>
+                        <small class="text-muted">
+                            Equivalente a <span id="giorni_rol">{{ ore_a_giorni(maturazione_rol) }}</span> giorni
+                        </small>
+                    </div>
+
+                    <div class="col-md-4 mb-3">
+                        <label for="maturazione_ex_fest" class="form-label">
+                            <strong>Maturazione Mensile EX FEST</strong>
+                        </label>
+                        <div class="input-group">
+                            <input type="number" 
+                                   class="form-control" 
+                                   id="maturazione_ex_fest" 
+                                   name="maturazione_ex_fest" 
+                                   value="{{ maturazione_ex_fest }}" 
+                                   step="0.5" 
+                                   min="0" 
+                                   required>
+                            <span class="input-group-text">ore</span>
+                        </div>
+                        <small class="text-muted">
+                            Equivalente a <span id="giorni_ex_fest">{{ ore_a_giorni(maturazione_ex_fest) }}</span> giorni
+                        </small>
+                    </div>
+                </div>
+
+                <div class="alert alert-info mt-3">
+                    <strong>ℹ️ Valori di Default Suggeriti:</strong>
+                    <ul class="mb-0">
+                        <li><strong>FERIE:</strong> {{ default_ferie }} ore ({{ ore_a_giorni(default_ferie) }} giorni)</li>
+                        <li><strong>ROL:</strong> {{ default_rol }} ore ({{ ore_a_giorni(default_rol) }} giorni)</li>
+                        <li><strong>EX FEST:</strong> {{ default_ex_fest }} ore ({{ ore_a_giorni(default_ex_fest) }} giorni)</li>
+                    </ul>
+                </div>
+
+                <div class="d-grid gap-2 d-md-flex justify-content-md-between mt-4">
+                    <button type="button" class="btn btn-secondary" onclick="ripristinaDefault()">
+                        🔄 Ripristina Valori Default
+                    </button>
+                    <button type="submit" class="btn btn-primary btn-lg">
+                        💾 Salva Configurazioni
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Card informativa aggiuntiva -->
+    <div class="card mt-4">
+        <div class="card-header bg-info text-white">
+            <h5 class="mb-0">📖 Informazioni</h5>
+        </div>
+        <div class="card-body">
+            <h6>Come funzionano le maturazioni?</h6>
+            <p>
+                Le maturazioni rappresentano i permessi che ti vengono accreditati ogni mese.
+                Quando aggiungi una maturazione dalla relativa sezione, il sistema creerà automaticamente
+                i movimenti di tipo "MATURAZIONE" utilizzando i valori che hai configurato qui.
+            </p>
+            <h6 class="mt-3">Conversione ore → giorni</h6>
+            <p class="mb-0">
+                Il sistema utilizza una giornata lavorativa di <strong>8 ore</strong> per la conversione.
+                Ad esempio: 14 ore = 1.75 giorni (14 ÷ 8 = 1.75)
+            </p>
+        </div>
+    </div>
+</div>
+
+<script>
+// Aggiorna la visualizzazione dei giorni in tempo reale
+function aggiornaGiorni(inputId, spanId) {
+    const ore = parseFloat(document.getElementById(inputId).value) || 0;
+    const giorni = (ore / 8).toFixed(2);
+    document.getElementById(spanId).textContent = giorni;
+}
+
+document.getElementById('maturazione_ferie').addEventListener('input', function() {
+    aggiornaGiorni('maturazione_ferie', 'giorni_ferie');
+});
+
+document.getElementById('maturazione_rol').addEventListener('input', function() {
+    aggiornaGiorni('maturazione_rol', 'giorni_rol');
+});
+
+document.getElementById('maturazione_ex_fest').addEventListener('input', function() {
+    aggiornaGiorni('maturazione_ex_fest', 'giorni_ex_fest');
+});
+
+// Funzione per ripristinare i valori di default
+function ripristinaDefault() {
+    if (confirm('Sei sicuro di voler ripristinare i valori di default?')) {
+        document.getElementById('maturazione_ferie').value = {{ default_ferie }};
+        document.getElementById('maturazione_rol').value = {{ default_rol }};
+        document.getElementById('maturazione_ex_fest').value = {{ default_ex_fest }};
+        
+        // Aggiorna i giorni
+        aggiornaGiorni('maturazione_ferie', 'giorni_ferie');
+        aggiornaGiorni('maturazione_rol', 'giorni_rol');
+        aggiornaGiorni('maturazione_ex_fest', 'giorni_ex_fest');
+    }
+}
+</script>
+{% endblock %}

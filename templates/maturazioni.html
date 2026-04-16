@@ -1,0 +1,163 @@
+{% extends "base.html" %}
+
+{% block title %}Maturazioni{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2 class="mb-4">💰 Gestione Maturazioni</h2>
+    
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                <div class="alert alert-{{ 'success' if category == 'success' else 'danger' }} alert-dismissible fade show" role="alert">
+                    {{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+
+    <!-- Card con valori di maturazione correnti -->
+    <div class="card mb-4">
+        <div class="card-header bg-primary text-white">
+            <h5 class="mb-0">📊 Maturazioni Mensili Configurate</h5>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-4 mb-3">
+                    <div class="card text-center">
+                        <div class="card-body">
+                            <h6 class="card-title">FERIE</h6>
+                            <p class="card-text display-6">{{ maturazione_ferie }} ore</p>
+                            <p class="text-muted">({{ ore_a_giorni(maturazione_ferie) }} giorni)</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4 mb-3">
+                    <div class="card text-center">
+                        <div class="card-body">
+                            <h6 class="card-title">ROL</h6>
+                            <p class="card-text display-6">{{ maturazione_rol }} ore</p>
+                            <p class="text-muted">({{ ore_a_giorni(maturazione_rol) }} giorni)</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4 mb-3">
+                    <div class="card text-center">
+                        <div class="card-body">
+                            <h6 class="card-title">EX FEST</h6>
+                            <p class="card-text display-6">{{ maturazione_ex_fest }} ore</p>
+                            <p class="text-muted">({{ ore_a_giorni(maturazione_ex_fest) }} giorni)</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="alert alert-info mt-3">
+                <strong>ℹ️ Nota:</strong> Questi sono i valori mensili che verranno accreditati quando aggiungi una maturazione.
+                Puoi modificarli nella sezione <a href="{{ url_for('configurazioni') }}" class="alert-link">Configurazioni</a>.
+            </div>
+        </div>
+    </div>
+
+    <!-- Form per aggiungere maturazione -->
+    <div class="card">
+        <div class="card-header bg-success text-white">
+            <h5 class="mb-0">➕ Aggiungi Maturazione</h5>
+        </div>
+        <div class="card-body">
+            <form method="POST" action="{{ url_for('maturazioni') }}">
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label for="mese" class="form-label">Mese</label>
+                        <select class="form-select" id="mese" name="mese" required>
+                            <option value="">Seleziona mese...</option>
+                            <option value="1">Gennaio</option>
+                            <option value="2">Febbraio</option>
+                            <option value="3">Marzo</option>
+                            <option value="4">Aprile</option>
+                            <option value="5">Maggio</option>
+                            <option value="6">Giugno</option>
+                            <option value="7">Luglio</option>
+                            <option value="8">Agosto</option>
+                            <option value="9">Settembre</option>
+                            <option value="10">Ottobre</option>
+                            <option value="11">Novembre</option>
+                            <option value="12">Dicembre</option>
+                        </select>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label for="anno" class="form-label">Anno</label>
+                        <select class="form-select" id="anno" name="anno" required>
+                            <option value="">Seleziona anno...</option>
+                            {% for year in range(2020, 2031) %}
+                                <option value="{{ year }}" {% if year == current_year %}selected{% endif %}>{{ year }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+                
+                <div class="alert alert-warning">
+                    <strong>⚠️ Attenzione:</strong> Questa operazione aggiungerà le seguenti maturazioni:
+                    <ul class="mb-0 mt-2">
+                        <li><strong>FERIE:</strong> {{ maturazione_ferie }} ore ({{ ore_a_giorni(maturazione_ferie) }} giorni)</li>
+                        <li><strong>ROL:</strong> {{ maturazione_rol }} ore ({{ ore_a_giorni(maturazione_rol) }} giorni)</li>
+                        <li><strong>EX FEST:</strong> {{ maturazione_ex_fest }} ore ({{ ore_a_giorni(maturazione_ex_fest) }} giorni)</li>
+                    </ul>
+                </div>
+                
+                <button type="submit" class="btn btn-success btn-lg w-100">
+                    💾 Aggiungi Maturazione
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Storico maturazioni (opzionale - se vuoi mostrare le maturazioni già inserite) -->
+    {% if storico_maturazioni %}
+    <div class="card mt-4">
+        <div class="card-header bg-info text-white">
+            <h5 class="mb-0">📜 Storico Maturazioni Inserite</h5>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-striped table-sm">
+                    <thead>
+                        <tr>
+                            <th>Mese/Anno</th>
+                            <th>FERIE (ore)</th>
+                            <th>ROL (ore)</th>
+                            <th>EX FEST (ore)</th>
+                            <th>Data Inserimento</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for mat in storico_maturazioni %}
+                        <tr>
+                            <td>{{ mat.mese }}/{{ mat.anno }}</td>
+                            <td>{{ mat.ferie }}</td>
+                            <td>{{ mat.rol }}</td>
+                            <td>{{ mat.ex_fest }}</td>
+                            <td>{{ mat.data.strftime('%d/%m/%Y') if mat.data else '-' }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<script>
+// Imposta il mese e anno correnti di default
+document.addEventListener('DOMContentLoaded', function() {
+    const now = new Date();
+    const currentMonth = now.getMonth() + 1; // JavaScript months are 0-indexed
+    
+    const meseSelect = document.getElementById('mese');
+    if (meseSelect.value === '') {
+        meseSelect.value = currentMonth;
+    }
+});
+</script>
+{% endblock %}

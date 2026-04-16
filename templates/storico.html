@@ -1,0 +1,115 @@
+{% extends "base.html" %}
+
+{% block title %}Storico Movimenti{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2 class="mb-4">📋 Storico Movimenti</h2>
+    
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                <div class="alert alert-{{ 'success' if category == 'success' else 'danger' }} alert-dismissible fade show" role="alert">
+                    {{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+
+    {% if movimenti %}
+        <div class="table-responsive">
+            <table class="table table-striped table-hover">
+                <thead class="table-dark">
+                    <tr>
+                        <th>Data</th>
+                        <th>Tipo Movimento</th>
+                        <th>Tipo Permesso</th>
+                        <th>Ore</th>
+                        <th>Giorni</th>
+                        <th>Anno Maturazione</th>
+                        <th>Note</th>
+                        <th>Azioni</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for movimento in movimenti %}
+                    <tr id="movimento-{{ movimento.id }}">
+                        <td>{{ movimento.data_movimento.strftime('%d/%m/%Y') }}</td>
+                        <td>
+                            <span class="badge 
+                                {% if movimento.tipo_movimento == 'MATURAZIONE' %}bg-success
+                                {% elif movimento.tipo_movimento == 'UTILIZZO' %}bg-primary
+                                {% elif movimento.tipo_movimento == 'RETRIBUZIONE' %}bg-warning text-dark
+                                {% elif movimento.tipo_movimento == 'RETTIFICA_POSITIVA' %}bg-info text-dark
+                                {% elif movimento.tipo_movimento == 'RETTIFICA_NEGATIVA' %}bg-danger
+                                {% elif movimento.tipo_movimento == 'SALDO_INIZIALE' %}bg-secondary
+                                {% endif %}">
+                                {{ movimento.tipo_movimento }}
+                            </span>
+                        </td>
+                        <td>
+                            <span class="badge bg-dark">{{ movimento.tipo_permesso }}</span>
+                        </td>
+                        <td>{{ movimento.ore }}</td>
+                        <td>{{ ore_a_giorni(movimento.ore) }}</td>
+                        <td>{{ movimento.anno_maturazione if movimento.anno_maturazione else '-' }}</td>
+                        <td>{{ movimento.note if movimento.note else '-' }}</td>
+                        <td>
+                            <button class="btn btn-sm btn-danger" onclick="cancellaMovimento({{ movimento.id }})">
+                                🗑️ Elimina
+                            </button>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    {% else %}
+        <div class="alert alert-info">
+            <strong>ℹ️ Nessun movimento presente</strong><br>
+            Non ci sono movimenti da visualizzare nello storico.
+        </div>
+    {% endif %}
+</div>
+
+<script>
+function cancellaMovimento(movimentoId) {
+    if (confirm('Sei sicuro di voler eliminare questo movimento?')) {
+        fetch(`/api/cancella_movimento/${movimentoId}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Rimuovi la riga dalla tabella
+                document.getElementById(`movimento-${movimentoId}`).remove();
+                
+                // Mostra messaggio di successo
+                const alertDiv = document.createElement('div');
+                alertDiv.className = 'alert alert-success alert-dismissible fade show';
+                alertDiv.innerHTML = `
+                    ${data.message}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                `;
+                document.querySelector('.container').insertBefore(alertDiv, document.querySelector('h2').nextSibling);
+                
+                // Ricarica la pagina dopo 1.5 secondi per aggiornare i dati
+                setTimeout(() => {
+                    location.reload();
+                }, 1500);
+            } else {
+                alert('Errore: ' + data.message);
+            }
+        })
+        .catch(error => {
+            console.error('Errore:', error);
+            alert('Si è verificato un errore durante l\'eliminazione del movimento.');
+        });
+    }
+}
+</script>
+{% endblock %}

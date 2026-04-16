@@ -1,0 +1,133 @@
+{% extends "base.html" %}
+{% block content %}
+<h1 class="mb-4"><i class="bi bi-calendar-plus"></i> Inserisci Permesso</h1>
+
+<div class="row">
+    <div class="col-lg-7">
+        <div class="card mb-3">
+            <div class="card-body">
+                <h5 class="card-title"><i class="bi bi-calendar3"></i> Calendario</h5>
+                <p class="text-muted small"><i class="bi bi-info-circle"></i> Clicca sui giorni per selezionarli. Weekend disabilitati.</p>
+                <div id="calendar"></div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-5">
+        <div class="card">
+            <div class="card-body">
+                <h5 class="card-title"><i class="bi bi-list-check"></i> Giorni selezionati</h5>
+                <div id="giorni-selezionati">
+                    <p class="text-muted text-center"><i class="bi bi-arrow-left"></i> Seleziona giorni dal calendario</p>
+                </div>
+                <div id="riepilogo" class="mt-3" style="display:none;">
+                    <hr>
+                    <button class="btn btn-success w-100 mb-2" onclick="confermaPermessi()">
+                        <i class="bi bi-check-circle"></i> Conferma e Inserisci
+                    </button>
+                    <button class="btn btn-outline-secondary w-100" onclick="cancellaTutto()">
+                        <i class="bi bi-trash"></i> Cancella tutto
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let giorniSelezionati = {};
+let calendar;
+
+document.addEventListener('DOMContentLoaded', function() {
+    calendar = new FullCalendar.Calendar(document.getElementById('calendar'), {
+        initialView: 'dayGridMonth',
+        locale: 'it',
+        headerToolbar: {left: 'prev,next today', center: 'title', right: ''},
+        dateClick: function(info) {
+            const dayOfWeek = info.date.getDay();
+            if (dayOfWeek === 0 || dayOfWeek === 6) { 
+                alert('Weekend non selezionabile!'); 
+                return; 
+            }
+            
+            const dateStr = info.dateStr;
+            const dayEl = info.dayEl;
+            
+            if (giorniSelezionati[dateStr]) {
+                delete giorniSelezionati[dateStr];
+                dayEl.classList.remove('selected');
+            } else {
+                const ore = dayOfWeek === 5 ? 7.0 : 8.0;
+                giorniSelezionati[dateStr] = {data: dateStr, tipo: 'FERIE', ore: ore, note: ''};
+                dayEl.classList.add('selected');
+            }
+            aggiornaLista();
+        }
+    });
+    calendar.render();
+});
+
+function aggiornaLista() {
+    const container = document.getElementById('giorni-selezionati');
+    const riepilogo = document.getElementById('riepilogo');
+    
+    if (Object.keys(giorniSelezionati).length === 0) {
+        container.innerHTML = '<p class="text-muted text-center"><i class="bi bi-arrow-left"></i> Seleziona giorni</p>';
+        riepilogo.style.display = 'none';
+        return;
+    }
+    
+    riepilogo.style.display = 'block';
+    let html = '<div style="max-height:400px;overflow-y:auto;"><table class="table table-sm"><thead><tr><th>Data</th><th>Tipo</th><th>Ore</th><th></th></tr></thead><tbody>';
+    
+    Object.keys(giorniSelezionati).sort().forEach(data => {
+        const g = giorniSelezionati[data];
+        const d = new Date(data + 'T00:00:00');
+        html += `<tr>
+            <td><small>${d.toLocaleDateString('it-IT')}</small></td>
+            <td>
+                <select class="form-select form-select-sm" onchange="giorniSelezionati['${data}'].tipo=this.value">
+                    <option value="FERIE" ${g.tipo==='FERIE'?'selected':''}>FERIE</option>
+                    <option value="ROL" ${g.tipo==='ROL'?'selected':''}>ROL</option>
+                    <option value="EX FEST" ${g.tipo==='EX FEST'?'selected':''}>EX FEST</option>
+                </select>
+            </td>
+            <td><input type="number" class="form-control form-control-sm" value="${g.ore}" min="0.5" max="8" step="0.5" 
+                onchange="giorniSelezionati['${data}'].ore=parseFloat(this.value)" style="width:70px;"></td>
+            <td><button class="btn btn-sm btn-outline-danger" onclick="delete giorniSelezionati['${data}'];aggiornaLista()">
+                <i class="bi bi-trash"></i></button></td>
+        </tr>`;
+    });
+    html += '</tbody></table></div>';
+    container.innerHTML = html;
+}
+
+function cancellaTutto() {
+    if (!confirm('Cancellare tutti?')) return;
+    giorniSelezionati = {};
+    document.querySelectorAll('.fc-daygrid-day.selected').forEach(el => el.classList.remove('selected'));
+    aggiornaLista();
+}
+
+function confermaPermessi() {
+    const giorni = Object.values(giorniSelezionati);
+    if (giorni.length === 0) { alert('Seleziona almeno un giorno!'); return; }
+    if (!confirm(`Confermi ${giorni.length} permessi?`)) return;
+    
+    fetch('/api/inserisci_permessi', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({giorni: giorni})
+    })
+    .then(r => r.json())
+    .then(data => {
+        let msg = `✅ ${data.successi} inseriti!`;
+        if (data.errori.length > 0) msg += '\n⚠️ Errori: ' + data.errori.join(', ');
+        alert(msg);
+        if (data.successi > 0) window.location.href = '/dashboard';
+    });
+}
+</script>
+{% endblock %}
