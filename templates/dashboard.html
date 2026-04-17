@@ -1,49 +1,85 @@
 {% extends "base.html" %}
+
+{% block title %}Dashboard{% endblock %}
+
 {% block content %}
-<h1 class="mb-4"><i class="bi bi-house"></i> Dashboard</h1>
-
-<div class="row g-3 mb-4">
-    <div class="col-md-4">
-        <div class="card text-center p-4">
-            <h5><i class="bi bi-umbrella-fill text-warning"></i> FERIE</h5>
-            {% set tot_ferie = saldo.FERIE.values()|sum %}
-            <h2 class="text-success">{{"%.2f"|format(tot_ferie)}}h</h2>
-            <small class="text-muted">≈ {{"%.1f"|format(ore_a_giorni(tot_ferie))}} giorni</small>
-            {% for anno, ore in saldo.FERIE.items() %}
-            <small class="text-muted">{{anno}}: {{"%.2f"|format(ore)}}h</small>
-            {% endfor %}
-        </div>
-    </div>
+<div class="container mt-4">
+    <h2 class="mb-4">📊 Dashboard - Anno {{ current_year }}</h2>
     
-    <div class="col-md-4">
-        <div class="card text-center p-4">
-            <h5><i class="bi bi-clock text-info"></i> ROL</h5>
-            {% set tot_rol = saldo.ROL.values()|sum %}
-            <h2 class="text-success">{{"%.2f"|format(tot_rol)}}h</h2>
-            <small class="text-muted">≈ {{"%.1f"|format(ore_a_giorni(tot_rol))}} giorni</small>
-            {% for anno, ore in saldo.ROL.items() %}
-            <small class="text-muted">{{anno}}: {{"%.2f"|format(ore)}}h</small>
-            {% endfor %}
+    <div class="row">
+        <!-- Card FERIE -->
+        <div class="col-md-4 mb-4">
+            <div class="card border-primary">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">🏖️ FERIE</h5>
+                </div>
+                <div class="card-body text-center">
+                    <h2 class="display-4">{{ saldi.FERIE.ore }} ore</h2>
+                    <p class="text-muted">({{ saldi.FERIE.giorni }} giorni)</p>
+                </div>
+            </div>
         </div>
-    </div>
-    
-    <div class="col-md-4">
-        <div class="card text-center p-4">
-            <h5><i class="bi bi-star text-success"></i> EX FEST</h5>
-            {% set tot_ex = saldo['EX FEST'].values()|sum %}
-            <h2 class="text-success">{{"%.2f"|format(tot_ex)}}h</h2>
-            <small class="text-muted">≈ {{"%.1f"|format(ore_a_giorni(tot_ex))}} giorni</small>
-            {% for anno, ore in saldo['EX FEST'].items() %}
-            <small class="text-muted">{{anno}}: {{"%.2f"|format(ore)}}h</small>
-            {% endfor %}
-        </div>
-    </div>
-</div>
 
-<div class="card">
-    <div class="card-body">
-        <h5><i class="bi bi-info-circle"></i> Info Sistema</h5>
-        <p>39 ore settimanali su 5 giorni (Lun-Gio: 8h | Ven: 7h)</p>
+        <!-- Card ROL -->
+        <div class="col-md-4 mb-4">
+            <div class="card border-success">
+                <div class="card-header bg-success text-white">
+                    <h5 class="mb-0">⏰ ROL</h5>
+                </div>
+                <div class="card-body text-center">
+                    <h2 class="display-4">{{ saldi.ROL.ore }} ore</h2>
+                    <p class="text-muted">({{ saldi.ROL.giorni }} giorni)</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Card EX FEST -->
+        <div class="col-md-4 mb-4">
+            <div class="card border-warning">
+                <div class="card-header bg-warning text-dark">
+                    <h5 class="mb-0">🎉 EX FEST</h5>
+                </div>
+                <div class="card-body text-center">
+                    <h2 class="display-4">{{ saldi['EX FEST'].ore }} ore</h2>
+                    <p class="text-muted">({{ saldi['EX FEST'].giorni }} giorni)</p>
+                </div>
+            </div>
+        </div>
     </div>
-</div>
-{% endblock %}
+
+    <!-- Riepilogo Totale -->
+    <div class="card mt-4">
+        <div class="card-header bg-info text-white">
+            <h5 class="mb-0">📈 Riepilogo Totale</h5>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-striped">
+                    <thead>
+                        <tr>
+                            <th>Tipo</th>
+                            <th>Ore</th>
+                            <th>Giorni</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><strong>🏖️ FERIE</strong></td>
+                            <td>{{ saldi.FERIE.ore }}</td>
+                            <td>{{ saldi.FERIE.giorni }}</td>
+                        </tr>
+                        <tr>
+                            <td><strong>⏰ ROL</strong></td>
+                            <td>{{ saldi.ROL.ore }}</td>
+                            <td>{{ saldi.ROL.giorni }}</td>
+                        </tr>
+                        <tr>
+                            <td><strong>🎉 EX FEST</strong></td>
+                            <td>{{ saldi['EX FEST'].ore }}</td>
+                            <td>{{ saldi['EX FEST'].giorni }}</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
