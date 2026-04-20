@@ -470,6 +470,53 @@ def configurazioni():
                          default_ex_fest=default_ex_fest,
                          ore_a_giorni=ore_a_giorni)
 
+@app.route('/api/permessi', methods=['GET'])
+@login_required
+def get_permessi():
+    """Restituisce i permessi dell'utente in formato FullCalendar"""
+    conn = get_db_connection()
+    cur = conn.cursor()
+    
+    cur.execute("""
+        SELECT id, data_movimento, tipo_permesso, tipo_movimento, ore, note
+        FROM movimenti 
+        WHERE user_id = %s 
+        AND cancellato = false 
+        AND tipo_movimento = 'UTILIZZO'
+        ORDER BY data_movimento
+    """, (current_user.id,))
+    
+    movimenti = cur.fetchall()
+    cur.close()
+    conn.close()
+    
+    # Converti in formato FullCalendar
+    eventi = []
+    for movimento in movimenti:
+        eventi.append({
+            'id': movimento['id'],
+            'title': f"{movimento['tipo_permesso']} ({movimento['ore']}h)",
+            'start': movimento['data_movimento'].strftime('%Y-%m-%d'),
+            'backgroundColor': get_tipo_color_api(movimento['tipo_permesso']),
+            'borderColor': get_tipo_color_api(movimento['tipo_permesso']),
+            'extendedProps': {
+                'ore': movimento['ore'],
+                'note': movimento['note'] or '',
+                'tipo': movimento['tipo_permesso']
+            }
+        })
+    
+    return jsonify(eventi)
+
+def get_tipo_color_api(tipo):
+    """Restituisce il colore per tipo di permesso"""
+    colors = {
+        'FERIE': '#0d6efd',
+        'ROL': '#198754',
+        'EX FEST': '#ffc107'
+    }
+    return colors.get(tipo, '#6c757d')
+
 @app.context_processor
 def inject_functions():
     return {'ore_a_giorni': ore_a_giorni}
