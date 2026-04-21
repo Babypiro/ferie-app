@@ -85,22 +85,20 @@ function cancellaMovimento(movimentoId) {
         .then(response => response.json())
         .then(data => {
             if (data.success) {
-                // Rimuovi la riga dalla tabella
-                document.getElementById(`movimento-${movimentoId}`).remove();
-                
-                // Mostra messaggio di successo
-                const alertDiv = document.createElement('div');
-                alertDiv.className = 'alert alert-success alert-dismissible fade show';
-                alertDiv.innerHTML = `
-                    ${data.message}
-                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-                `;
-                document.querySelector('.container').insertBefore(alertDiv, document.querySelector('h2').nextSibling);
-                
-                // Ricarica la pagina dopo 1.5 secondi per aggiornare i dati
-                setTimeout(() => {
-                    location.reload();
-                }, 1500);
+                // Rimuovi la riga dalla tabella senza mostrare alert
+                const row = document.getElementById(`movimento-${movimentoId}`);
+                if (row) {
+                    row.style.backgroundColor = '#d4edda';
+                    setTimeout(() => {
+                        row.remove();
+                        
+                        // Se non ci sono più righe, mostra messaggio
+                        const tbody = document.querySelector('tbody');
+                        if (tbody && tbody.children.length === 0) {
+                            location.reload();
+                        }
+                    }, 500);
+                }
             } else {
                 alert('Errore: ' + data.message);
             }
@@ -112,4 +110,3 @@ function cancellaMovimento(movimentoId) {
     }
 }
 </script>
-{% endblock %}
