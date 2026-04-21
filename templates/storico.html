@@ -37,16 +37,21 @@
                     <tr id="movimento-{{ movimento.id }}">
                         <td>{{ movimento.data_movimento.strftime('%d/%m/%Y') }}</td>
                         <td>
-                            <span class="badge 
-                                {% if movimento.tipo_movimento == 'MATURAZIONE' %}bg-success
-                                {% elif movimento.tipo_movimento == 'UTILIZZO' %}bg-primary
-                                {% elif movimento.tipo_movimento == 'RETRIBUZIONE' %}bg-warning text-dark
-                                {% elif movimento.tipo_movimento == 'RETTIFICA_POSITIVA' %}bg-info text-dark
-                                {% elif movimento.tipo_movimento == 'RETTIFICA_NEGATIVA' %}bg-danger
-                                {% elif movimento.tipo_movimento == 'SALDO_INIZIALE' %}bg-secondary
-                                {% endif %}">
-                                {{ movimento.tipo_movimento }}
-                            </span>
+                            {% if movimento.tipo_movimento == 'MATURAZIONE' %}
+                                <span class="badge bg-success">{{ movimento.tipo_movimento }}</span>
+                            {% elif movimento.tipo_movimento == 'UTILIZZO' %}
+                                <span class="badge bg-primary">{{ movimento.tipo_movimento }}</span>
+                            {% elif movimento.tipo_movimento == 'RETRIBUZIONE' %}
+                                <span class="badge bg-warning text-dark">{{ movimento.tipo_movimento }}</span>
+                            {% elif movimento.tipo_movimento == 'RETTIFICA_POSITIVA' %}
+                                <span class="badge bg-info text-dark">{{ movimento.tipo_movimento }}</span>
+                            {% elif movimento.tipo_movimento == 'RETTIFICA_NEGATIVA' %}
+                                <span class="badge bg-danger">{{ movimento.tipo_movimento }}</span>
+                            {% elif movimento.tipo_movimento == 'SALDO_INIZIALE' %}
+                                <span class="badge bg-secondary">{{ movimento.tipo_movimento }}</span>
+                            {% else %}
+                                <span class="badge bg-secondary">{{ movimento.tipo_movimento }}</span>
+                            {% endif %}
                         </td>
                         <td>
                             <span class="badge bg-dark">{{ movimento.tipo_permesso }}</span>
@@ -85,18 +90,22 @@ function cancellaMovimento(movimentoId) {
         .then(response => response.json())
         .then(data => {
             if (data.success) {
-                // Rimuovi la riga dalla tabella senza mostrare alert
+                // Rimuovi la riga dalla tabella con animazione
                 const row = document.getElementById(`movimento-${movimentoId}`);
                 if (row) {
                     row.style.backgroundColor = '#d4edda';
+                    row.style.transition = 'all 0.5s';
                     setTimeout(() => {
-                        row.remove();
-                        
-                        // Se non ci sono più righe, mostra messaggio
-                        const tbody = document.querySelector('tbody');
-                        if (tbody && tbody.children.length === 0) {
-                            location.reload();
-                        }
+                        row.style.opacity = '0';
+                        setTimeout(() => {
+                            row.remove();
+                            
+                            // Se non ci sono più righe, ricarica la pagina
+                            const tbody = document.querySelector('tbody');
+                            if (!tbody || tbody.children.length === 0) {
+                                location.reload();
+                            }
+                        }, 500);
                     }, 500);
                 }
             } else {
@@ -110,3 +119,4 @@ function cancellaMovimento(movimentoId) {
     }
 }
 </script>
+{% endblock %}
