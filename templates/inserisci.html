@@ -85,18 +85,30 @@ document.addEventListener('DOMContentLoaded', function() {
             toggleGiorno(info.dateStr);
         },
         events: function(info, successCallback) {
-            // Mostra i giorni selezionati come eventi
-            let eventi = [];
+    // Carica i permessi dal database
+    fetch('/api/permessi')
+        .then(response => response.json())
+        .then(permessiDb => {
+            // Aggiungi anche i giorni selezionati ma non ancora salvati
+            let eventiTemp = [];
             for (let data in giorniSelezionati) {
-                eventi.push({
-                    title: giorniSelezionati[data].tipo,
+                eventiTemp.push({
+                    title: `${giorniSelezionati[data].tipo} (${giorniSelezionati[data].ore}h) [TEMP]`,
                     start: data,
                     backgroundColor: getTipoColor(giorniSelezionati[data].tipo),
-                    borderColor: getTipoColor(giorniSelezionati[data].tipo)
+                    borderColor: getTipoColor(giorniSelezionati[data].tipo),
+                    classNames: ['evento-temporaneo']
                 });
             }
-            successCallback(eventi);
-        }
+            
+            // Combina permessi salvati e temporanei
+            successCallback([...permessiDb, ...eventiTemp]);
+        })
+        .catch(error => {
+            console.error('Errore caricamento permessi:', error);
+            successCallback([]);
+        });
+}
     });
     
     calendar.render();
@@ -233,9 +245,10 @@ function confermaInserimento() {
     .then(data => {
         if (data.success) {
             alert(data.message);
-            // Resetta tutto
+            // Resetta la selezione
             giorniSelezionati = {};
             aggiornaLista();
+            // Ricarica gli eventi dal database
             calendar.refetchEvents();
         } else {
             alert('Errore: ' + data.message);
@@ -246,6 +259,7 @@ function confermaInserimento() {
         alert('Si è verificato un errore durante l\'inserimento.');
     });
 }
+
 </script>
 
 <style>
@@ -261,6 +275,11 @@ function confermaInserimento() {
 .fc-daygrid-day:hover {
     background-color: #e9ecef;
     cursor: pointer;
+}
+
+.evento-temporaneo {
+    opacity: 0.6;
+    border: 2px dashed !important;
 }
 </style>
 {% endblock %}
