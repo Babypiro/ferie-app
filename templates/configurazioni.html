@@ -17,17 +17,103 @@
         {% endif %}
     {% endwith %}
 
-    <div class="card">
-        <div class="card-header bg-primary text-white">
-            <h5 class="mb-0">🔧 Impostazioni Maturazioni Mensili</h5>
+    <!-- SEZIONE 1: Ore Lavorative -->
+    <div class="card mb-4">
+        <div class="card-header bg-warning text-dark">
+            <h5 class="mb-0">⏰ Ore Lavorative Settimanali</h5>
         </div>
         <div class="card-body">
-            <p class="text-muted mb-4">
-                Configura qui i valori di maturazione mensile per ciascun tipo di permesso. 
-                Questi valori verranno utilizzati quando aggiungi nuove maturazioni.
+            <p class="text-muted mb-3">
+                Configura il tuo orario di lavoro settimanale. Questo verrà usato per convertire ore in giorni.
             </p>
 
             <form method="POST" action="{{ url_for('configurazioni') }}" id="configForm">
+                <input type="hidden" name="form_type" value="orario_lavoro">
+                
+                <div class="table-responsive">
+                    <table class="table table-bordered">
+                        <thead>
+                            <tr>
+                                <th>Giorno</th>
+                                <th style="width: 100px;">Lavoro?</th>
+                                <th style="width: 150px;">Ore</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% set giorni = [
+                                ('lunedi', 'Lunedì'),
+                                ('martedi', 'Martedì'),
+                                ('mercoledi', 'Mercoledì'),
+                                ('giovedi', 'Giovedì'),
+                                ('venerdi', 'Venerdì'),
+                                ('sabato', 'Sabato'),
+                                ('domenica', 'Domenica')
+                            ] %}
+                            
+                            {% for giorno_key, giorno_nome in giorni %}
+                            <tr>
+                                <td><strong>{{ giorno_nome }}</strong></td>
+                                <td class="text-center">
+                                    <input type="checkbox" 
+                                           class="form-check-input giorno-checkbox" 
+                                           name="lavora_{{ giorno_key }}" 
+                                           id="lavora_{{ giorno_key }}"
+                                           onchange="toggleOre('{{ giorno_key }}')"
+                                           {% if orario_lavoro.get('lavora_' + giorno_key, giorno_key not in ['sabato', 'domenica']) %}checked{% endif %}>
+                                </td>
+                                <td>
+                                    <input type="number" 
+                                           class="form-control form-control-sm ore-input" 
+                                           name="ore_{{ giorno_key }}" 
+                                           id="ore_{{ giorno_key }}"
+                                           value="{{ orario_lavoro.get('ore_' + giorno_key, 8.0) }}" 
+                                           step="0.01" 
+                                           min="0" 
+                                           max="24"
+                                           {% if not orario_lavoro.get('lavora_' + giorno_key, giorno_key not in ['sabato', 'domenica']) %}disabled{% endif %}>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                        <tfoot>
+                            <tr class="table-info">
+                                <td colspan="2"><strong>Totale Ore Settimanali</strong></td>
+                                <td><strong id="totale-ore-sett">{{ ore_settimanali_totali }}</strong> ore</td>
+                            </tr>
+                            <tr class="table-success">
+                                <td colspan="2"><strong>Ore per Giorno Lavorativo (media)</strong></td>
+                                <td><strong id="media-ore-giorno">{{ ore_giorno_media }}</strong> ore</td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+
+                <div class="alert alert-info">
+                    <strong>ℹ️ Come funziona:</strong> 
+                    Il sistema userà la media delle tue ore giornaliere per convertire ore in giorni.
+                    Ad esempio, se lavori in media 8 ore al giorno, 16 ore = 2 giorni.
+                </div>
+
+                <button type="submit" class="btn btn-primary btn-lg w-100 mb-2">
+                    💾 Salva Orario di Lavoro
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- SEZIONE 2: Maturazioni Mensili -->
+    <div class="card">
+        <div class="card-header bg-primary text-white">
+            <h5 class="mb-0">🔧 Maturazioni Mensili</h5>
+        </div>
+        <div class="card-body">
+            <p class="text-muted mb-4">
+                Configura quante ore maturano ogni mese per ciascun tipo di permesso.
+            </p>
+
+            <form method="POST" action="{{ url_for('configurazioni') }}">
+                <input type="hidden" name="form_type" value="maturazioni">
+                
                 <div class="row">
                     <div class="col-md-4 mb-3">
                         <label for="maturazione_ferie" class="form-label">
@@ -35,17 +121,17 @@
                         </label>
                         <div class="input-group">
                             <input type="number" 
-                                   class="form-control" 
+                                   class="form-control maturazione-input" 
                                    id="maturazione_ferie" 
                                    name="maturazione_ferie" 
                                    value="{{ maturazione_ferie }}" 
-                                   step="0.5" 
+                                   step="0.01" 
                                    min="0" 
                                    required>
                             <span class="input-group-text">ore</span>
                         </div>
                         <small class="text-muted">
-                            Equivalente a <span id="giorni_ferie">{{ ore_a_giorni(maturazione_ferie) }}</span> giorni
+                            Equivalente a <span id="giorni_ferie" class="fw-bold">{{ (maturazione_ferie / ore_giorno_media)|round(2) }}</span> giorni
                         </small>
                     </div>
 
@@ -55,17 +141,17 @@
                         </label>
                         <div class="input-group">
                             <input type="number" 
-                                   class="form-control" 
+                                   class="form-control maturazione-input" 
                                    id="maturazione_rol" 
                                    name="maturazione_rol" 
                                    value="{{ maturazione_rol }}" 
-                                   step="0.5" 
+                                   step="0.01" 
                                    min="0" 
                                    required>
                             <span class="input-group-text">ore</span>
                         </div>
                         <small class="text-muted">
-                            Equivalente a <span id="giorni_rol">{{ ore_a_giorni(maturazione_rol) }}</span> giorni
+                            Equivalente a <span id="giorni_rol" class="fw-bold">{{ (maturazione_rol / ore_giorno_media)|round(2) }}</span> giorni
                         </small>
                     </div>
 
@@ -75,17 +161,17 @@
                         </label>
                         <div class="input-group">
                             <input type="number" 
-                                   class="form-control" 
+                                   class="form-control maturazione-input" 
                                    id="maturazione_ex_fest" 
                                    name="maturazione_ex_fest" 
                                    value="{{ maturazione_ex_fest }}" 
-                                   step="0.5" 
+                                   step="0.01" 
                                    min="0" 
                                    required>
                             <span class="input-group-text">ore</span>
                         </div>
                         <small class="text-muted">
-                            Equivalente a <span id="giorni_ex_fest">{{ ore_a_giorni(maturazione_ex_fest) }}</span> giorni
+                            Equivalente a <span id="giorni_ex_fest" class="fw-bold">{{ (maturazione_ex_fest / ore_giorno_media)|round(2) }}</span> giorni
                         </small>
                     </div>
                 </div>
@@ -93,9 +179,9 @@
                 <div class="alert alert-info mt-3">
                     <strong>ℹ️ Valori di Default Suggeriti:</strong>
                     <ul class="mb-0">
-                        <li><strong>FERIE:</strong> {{ default_ferie }} ore ({{ ore_a_giorni(default_ferie) }} giorni)</li>
-                        <li><strong>ROL:</strong> {{ default_rol }} ore ({{ ore_a_giorni(default_rol) }} giorni)</li>
-                        <li><strong>EX FEST:</strong> {{ default_ex_fest }} ore ({{ ore_a_giorni(default_ex_fest) }} giorni)</li>
+                        <li><strong>FERIE:</strong> {{ default_ferie }} ore ({{ (default_ferie / ore_giorno_media)|round(2) }} giorni)</li>
+                        <li><strong>ROL:</strong> {{ default_rol }} ore ({{ (default_rol / ore_giorno_media)|round(2) }} giorni)</li>
+                        <li><strong>EX FEST:</strong> {{ default_ex_fest }} ore ({{ (default_ex_fest / ore_giorno_media)|round(2) }} giorni)</li>
                     </ul>
                 </div>
 
@@ -103,15 +189,15 @@
                     <button type="button" class="btn btn-secondary" onclick="ripristinaDefault()">
                         🔄 Ripristina Valori Default
                     </button>
-                    <button type="submit" class="btn btn-primary btn-lg">
-                        💾 Salva Configurazioni
+                    <button type="submit" class="btn btn-success btn-lg">
+                        💾 Salva Maturazioni
                     </button>
                 </div>
             </form>
         </div>
     </div>
 
-    <!-- Card informativa aggiuntiva -->
+    <!-- Card informativa -->
     <div class="card mt-4">
         <div class="card-header bg-info text-white">
             <h5 class="mb-0">📖 Informazioni</h5>
@@ -125,45 +211,87 @@
             </p>
             <h6 class="mt-3">Conversione ore → giorni</h6>
             <p class="mb-0">
-                Il sistema utilizza una giornata lavorativa di <strong>8 ore</strong> per la conversione.
-                Ad esempio: 14 ore = 1.75 giorni (14 ÷ 8 = 1.75)
+                Il sistema usa la tua configurazione di ore lavorative giornaliere per calcolare i giorni.
+                La conversione si basa sulla <strong>media delle ore che lavori</strong> nei giorni configurati.
             </p>
         </div>
     </div>
 </div>
 
 <script>
-// Aggiorna la visualizzazione dei giorni in tempo reale
-function aggiornaGiorni(inputId, spanId) {
-    const ore = parseFloat(document.getElementById(inputId).value) || 0;
-    const giorni = (ore / 8).toFixed(2);
-    document.getElementById(spanId).textContent = giorni;
+const oreGiornoMedia = {{ ore_giorno_media }};
+
+// Abilita/disabilita input ore quando si clicca checkbox
+function toggleOre(giorno) {
+    const checkbox = document.getElementById('lavora_' + giorno);
+    const input = document.getElementById('ore_' + giorno);
+    input.disabled = !checkbox.checked;
+    if (!checkbox.checked) {
+        input.value = 0;
+    }
+    calcolaTotali();
 }
 
-document.getElementById('maturazione_ferie').addEventListener('input', function() {
-    aggiornaGiorni('maturazione_ferie', 'giorni_ferie');
+// Calcola totali ore settimanali e media
+function calcolaTotali() {
+    let totale = 0;
+    let giorniLavorativi = 0;
+    
+    document.querySelectorAll('.giorno-checkbox').forEach(checkbox => {
+        if (checkbox.checked) {
+            const giorno = checkbox.name.replace('lavora_', '');
+            const ore = parseFloat(document.getElementById('ore_' + giorno).value) || 0;
+            totale += ore;
+            giorniLavorativi++;
+        }
+    });
+    
+    const media = giorniLavorativi > 0 ? (totale / giorniLavorativi).toFixed(2) : 0;
+    
+    document.getElementById('totale-ore-sett').textContent = totale.toFixed(2);
+    document.getElementById('media-ore-giorno').textContent = media;
+    
+    // Aggiorna conversioni maturazioni
+    aggiornaConversioniMaturazioni(parseFloat(media));
+}
+
+// Aggiorna conversioni in tempo reale per maturazioni
+function aggiornaConversioniMaturazioni(media) {
+    const ferie = parseFloat(document.getElementById('maturazione_ferie').value) || 0;
+    const rol = parseFloat(document.getElementById('maturazione_rol').value) || 0;
+    const exFest = parseFloat(document.getElementById('maturazione_ex_fest').value) || 0;
+    
+    if (media > 0) {
+        document.getElementById('giorni_ferie').textContent = (ferie / media).toFixed(2);
+        document.getElementById('giorni_rol').textContent = (rol / media).toFixed(2);
+        document.getElementById('giorni_ex_fest').textContent = (exFest / media).toFixed(2);
+    }
+}
+
+// Event listeners per input ore
+document.querySelectorAll('.ore-input').forEach(input => {
+    input.addEventListener('input', calcolaTotali);
 });
 
-document.getElementById('maturazione_rol').addEventListener('input', function() {
-    aggiornaGiorni('maturazione_rol', 'giorni_rol');
+// Event listeners per input maturazioni
+document.querySelectorAll('.maturazione-input').forEach(input => {
+    input.addEventListener('input', function() {
+        const media = parseFloat(document.getElementById('media-ore-giorno').textContent) || oreGiornoMedia;
+        aggiornaConversioniMaturazioni(media);
+    });
 });
 
-document.getElementById('maturazione_ex_fest').addEventListener('input', function() {
-    aggiornaGiorni('maturazione_ex_fest', 'giorni_ex_fest');
-});
-
-// Funzione per ripristinare i valori di default
+// Ripristina valori default
 function ripristinaDefault() {
     if (confirm('Sei sicuro di voler ripristinare i valori di default?')) {
         document.getElementById('maturazione_ferie').value = {{ default_ferie }};
         document.getElementById('maturazione_rol').value = {{ default_rol }};
         document.getElementById('maturazione_ex_fest').value = {{ default_ex_fest }};
-        
-        // Aggiorna i giorni
-        aggiornaGiorni('maturazione_ferie', 'giorni_ferie');
-        aggiornaGiorni('maturazione_rol', 'giorni_rol');
-        aggiornaGiorni('maturazione_ex_fest', 'giorni_ex_fest');
+        aggiornaConversioniMaturazioni(oreGiornoMedia);
     }
 }
+
+// Calcola totali all'avvio
+document.addEventListener('DOMContentLoaded', calcolaTotali);
 </script>
 {% endblock %}
