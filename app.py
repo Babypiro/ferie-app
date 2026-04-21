@@ -434,24 +434,59 @@ def maturazioni():
 @login_required
 def configurazioni():
     if request.method == 'POST':
+        form_type = request.form.get('form_type', 'maturazioni')
+        
         try:
-            # Salva le nuove configurazioni
-            maturazione_ferie = float(request.form['maturazione_ferie'])
-            maturazione_rol = float(request.form['maturazione_rol'])
-            maturazione_ex_fest = float(request.form['maturazione_ex_fest'])
-            
-            set_configurazione('maturazione_ferie', maturazione_ferie)
-            set_configurazione('maturazione_rol', maturazione_rol)
-            set_configurazione('maturazione_ex_fest', maturazione_ex_fest)
-            
-            flash('Configurazioni salvate con successo!', 'success')
+            if form_type == 'orario_lavoro':
+                # Salva configurazione orario di lavoro
+                giorni = ['lunedi', 'martedi', 'mercoledi', 'giovedi', 'venerdi', 'sabato', 'domenica']
+                
+                for giorno in giorni:
+                    lavora = request.form.get(f'lavora_{giorno}') == 'on'
+                    ore = float(request.form.get(f'ore_{giorno}', 0)) if lavora else 0
+                    
+                    set_configurazione(f'lavora_{giorno}', '1' if lavora else '0')
+                    set_configurazione(f'ore_{giorno}', str(ore))
+                
+                flash('Orario di lavoro salvato con successo!', 'success')
+                
+            else:  # maturazioni
+                # Salva le maturazioni
+                maturazione_ferie = float(request.form['maturazione_ferie'])
+                maturazione_rol = float(request.form['maturazione_rol'])
+                maturazione_ex_fest = float(request.form['maturazione_ex_fest'])
+                
+                set_configurazione('maturazione_ferie', maturazione_ferie)
+                set_configurazione('maturazione_rol', maturazione_rol)
+                set_configurazione('maturazione_ex_fest', maturazione_ex_fest)
+                
+                flash('Maturazioni salvate con successo!', 'success')
             
         except Exception as e:
             flash(f'Errore durante il salvataggio: {str(e)}', 'error')
         
         return redirect(url_for('configurazioni'))
     
-    # GET request - mostra la pagina
+    # GET request - carica configurazioni
+    # Carica orario di lavoro
+    giorni = ['lunedi', 'martedi', 'mercoledi', 'giovedi', 'venerdi', 'sabato', 'domenica']
+    orario_lavoro = {}
+    
+    for giorno in giorni:
+        # Default: lun-ven 8 ore, sab-dom non lavorativi
+        default_lavora = giorno not in ['sabato', 'domenica']
+        default_ore = 8.0 if default_lavora else 0
+        
+        lavora_value = get_configurazione(f'lavora_{giorno}', '1' if default_lavora else '0')
+        orario_lavoro[f'lavora_{giorno}'] = lavora_value == '1' or lavora_value == 1
+        orario_lavoro[f'ore_{giorno}'] = float(get_configurazione(f'ore_{giorno}', default_ore))
+    
+    # Calcola totali
+    ore_settimanali_totali = sum(orario_lavoro[f'ore_{giorno}'] for giorno in giorni)
+    giorni_lavorativi = sum(1 for giorno in giorni if orario_lavoro[f'lavora_{giorno}'])
+    ore_giorno_media = round(ore_settimanali_totali / giorni_lavorativi, 2) if giorni_lavorativi > 0 else 8.0
+    
+    # Carica maturazioni
     maturazione_ferie = get_configurazione('maturazione_ferie', 14)
     maturazione_rol = get_configurazione('maturazione_rol', 4)
     maturazione_ex_fest = get_configurazione('maturazione_ex_fest', 8)
@@ -462,6 +497,9 @@ def configurazioni():
     default_ex_fest = 8
     
     return render_template('configurazioni.html',
+                         orario_lavoro=orario_lavoro,
+                         ore_settimanali_totali=ore_settimanali_totali,
+                         ore_giorno_media=ore_giorno_media,
                          maturazione_ferie=maturazione_ferie,
                          maturazione_rol=maturazione_rol,
                          maturazione_ex_fest=maturazione_ex_fest,
